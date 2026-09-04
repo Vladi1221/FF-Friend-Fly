@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prototipo · Botón Transferir — Splitwaisito</title>
+<style>
+  :root{
+    --bg:#0f1420; --card:#171e2e; --card2:#1d2740; --text:#e8ecf5; --muted:#93a0b8;
+    --accent:#41c4a5; --accent2:#5b8def; --warn:#e8b44a; --border:#2a3550;
+    --wa:#25d366; --mp:#009ee3;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.5;padding:20px 14px 90px;max-width:480px;margin:0 auto}
+  h1{font-size:1.25rem;margin-bottom:2px}
+  h1 span{color:var(--accent)}
+  .sub{color:var(--muted);font-size:.85rem;margin-bottom:20px}
+  .debt{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px}
+  .debt-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .who{font-size:.95rem;font-weight:600}
+  .why{font-size:.8rem;color:var(--muted)}
+  .amt{font-size:1.3rem;font-weight:700;color:var(--warn);white-space:nowrap}
+  .btn-row{display:flex;gap:8px;margin-top:12px}
+  button{border:none;border-radius:10px;padding:11px 14px;font-size:.9rem;font-weight:600;cursor:pointer;flex:1}
+  .b-pay{background:var(--accent);color:#08211b}
+  .b-wa{background:transparent;color:var(--wa);border:1px solid var(--wa);flex:0 0 auto}
+  .b-ghost{background:transparent;color:var(--accent2);border:1px solid var(--accent2)}
+  /* form */
+  details.add{margin:18px 0}
+  details.add summary{color:var(--accent2);font-size:.9rem;cursor:pointer}
+  .add-form{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-top:10px}
+  label{display:block;font-size:.75rem;color:var(--muted);margin:8px 0 3px}
+  input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:.95rem}
+  input:focus{outline:none;border-color:var(--accent2)}
+  /* modal */
+  .overlay{position:fixed;inset:0;background:rgba(5,8,15,.82);display:none;align-items:flex-end;justify-content:center;z-index:50}
+  .overlay.show{display:flex}
+  .sheet{background:var(--card2);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:24px 20px 34px;width:100%;max-width:480px;text-align:center}
+  .sheet h2{font-size:1rem;color:var(--muted);font-weight:500}
+  .sheet .big{font-size:3rem;font-weight:800;margin:8px 0 2px;letter-spacing:-.02em}
+  .sheet .to{font-size:.95rem;margin-bottom:4px}
+  .copied{display:inline-block;background:#12352e;color:var(--accent);font-size:.78rem;padding:4px 12px;border-radius:99px;margin:8px 0 4px;transition:.3s}
+  .copied.flash{transform:scale(1.06)}
+  .sheet .stack{display:flex;flex-direction:column;gap:9px;margin-top:16px}
+  .b-mp{background:var(--mp);color:#fff}
+  .b-copy{background:transparent;color:var(--text);border:1px solid var(--border)}
+  .b-close{background:transparent;color:var(--muted);border:none;font-weight:500;margin-top:4px}
+  .hintline{font-size:.74rem;color:var(--muted);margin-top:10px}
+  .note{border-left:3px solid var(--warn);background:#241f12;border-radius:0 8px 8px 0;padding:9px 12px;font-size:.78rem;color:#e5d5ac;margin-top:16px}
+</style>
+</head>
+<body>
+  <h1>Deudas del grupo <span>· prototipo</span></h1>
+  <p class="sub">Simulación del botón "Transferir" de Splitwaisito con el mecanismo validado en el spike. Abrilo en el teléfono para probar el flujo completo.</p>
+
+  <div id="list"></div>
+
+  <details class="add">
+    <summary>+ Agregar deuda de prueba (datos reales de tu grupo)</summary>
+    <div class="add-form">
+      <label>Nombre del acreedor</label><input id="f-nombre" placeholder="Franco">
+      <label>E-mail de su cuenta MP</label><input id="f-email" type="email" placeholder="franco@mail.com">
+      <label>Alias (opcional, para el camino app)</label><input id="f-alias" placeholder="franco.mp">
+      <label>Teléfono con WhatsApp (opcional, formato 549…)</label><input id="f-tel" placeholder="5491122334455">
+      <label>Monto</label><input id="f-monto" inputmode="decimal" placeholder="400">
+      <label>Motivo</label><input id="f-motivo" placeholder="Asado del sábado">
+      <button class="b-pay" style="margin-top:12px" onclick="addDebt()">Agregar</button>
+    </div>
+  </details>
+
+  <div class="note"><strong>Qué estamos probando:</strong> al tocar Transferir, la app copia el e-mail del acreedor (el dato que resuelve destinatario en "Enviar dinero" de MP) y te muestra el monto para tenerlo fresco. Después elegís: app de MP (pegás el alias/e-mail en Transferir) o web Enviar dinero (pegás el e-mail). Medí cuántos segundos te lleva de punta a punta — ese número va a la planilla.</div>
+
+  <!-- modal -->
+  <div class="overlay" id="ov">
+    <div class="sheet">
+      <h2>Le debés a <span id="m-nombre" class="to" style="font-weight:700"></span></h2>
+      <div class="big" id="m-monto"></div>
+      <div class="why" id="m-motivo"></div>
+      <div class="copied" id="m-copied">e-mail copiado ✓</div>
+      <div class="stack">
+        <button class="b-mp" onclick="openMPApp()">Abrir app de Mercado Pago</button>
+        <button class="b-ghost" onclick="openMPWeb()">Abrir "Enviar dinero" (web)</button>
+        <button class="b-copy" id="b-alias" onclick="copyAlias()">Copiar alias</button>
+        <button class="b-copy" onclick="copyEmail()">Volver a copiar e-mail</button>
+        <button class="b-copy" onclick="copyMonto()">Copiar monto</button>
+        <button class="b-close" onclick="closeOv()">Cerrar</button>
+      </div>
+      <div class="hintline">El portapapeles guarda una cosa a la vez: e-mail ya copiado; copiá el monto cuando lo necesites.</div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+  var debts=[
+    {nombre:"Lucas (vos)", email:"lucastmotta27@gmail.com", alias:"ltm.27.galicia", tel:"", monto:400, motivo:"Prueba del spike — alias Galicia"},
+    {nombre:"Joaquín", email:"joaquin@ejemplo.com", alias:"", tel:"", monto:1500, motivo:"Nafta del viaje"}
+  ];
+  var current=null;
+
+  function fmt(n){return "$"+Number(n).toLocaleString("es-AR");}
+
+  function render(){
+    var list=document.getElementById("list");
+    list.innerHTML="";
+    debts.forEach(function(d,i){
+      var el=document.createElement("div");el.className="debt";
+      var waBtn=d.tel?'<button class="b-wa" onclick="notifyWA('+i+')">WhatsApp</button>':"";
+      el.innerHTML='<div class="debt-top"><div><div class="who">'+d.nombre+'</div><div class="why">'+d.motivo+'</div></div><div class="amt">'+fmt(d.monto)+'</div></div>'+
+        '<div class="btn-row"><button class="b-pay" onclick="pay('+i+')">Transferir</button>'+waBtn+'</div>';
+      list.appendChild(el);
+    });
+  }
+
+  function copy(txt){
+    return navigator.clipboard.writeText(txt).catch(function(){
+      var ta=document.createElement("textarea");ta.value=txt;document.body.appendChild(ta);ta.select();
+      try{document.execCommand("copy");}catch(e){}
+      document.body.removeChild(ta);
+    });
+  }
+  function flash(label){
+    var c=document.getElementById("m-copied");
+    c.textContent=label+" ✓";
+    c.classList.add("flash");setTimeout(function(){c.classList.remove("flash");},350);
+  }
+
+  window.pay=function(i){
+    current=debts[i];
+    document.getElementById("m-nombre").textContent=current.nombre;
+    document.getElementById("m-monto").textContent=fmt(current.monto);
+    document.getElementById("m-motivo").textContent=current.motivo;
+    document.getElementById("b-alias").style.display=current.alias?"block":"none";
+    copy(current.email).then(function(){flash("e-mail copiado");});
+    document.getElementById("ov").classList.add("show");
+  };
+  window.closeOv=function(){document.getElementById("ov").classList.remove("show");};
+  window.copyEmail=function(){copy(current.email).then(function(){flash("e-mail copiado");});};
+  window.copyAlias=function(){copy(current.alias).then(function(){flash("alias copiado");});};
+  window.copyMonto=function(){copy(String(current.monto)).then(function(){flash("monto copiado");});};
+  window.openMPApp=function(){window.location.href="mercadopago://home";};
+  window.openMPWeb=function(){window.open("https://www.mercadopago.com.ar/money-transfer","_blank");};
+  window.notifyWA=function(i){
+    var d=debts[i];
+    var text="Hola "+d.nombre+"! Te transferí "+fmt(d.monto)+" por \""+d.motivo+"\" vía Splitwaisito 💸";
+    window.open("https://wa.me/"+d.tel+"?text="+encodeURIComponent(text),"_blank");
+  };
+  window.addDebt=function(){
+    var g=function(id){return document.getElementById(id).value.trim();};
+    var monto=parseFloat(g("f-monto").replace(",", "."));
+    if(!g("f-nombre")||!g("f-email")||!monto){alert("Nombre, e-mail y monto como mínimo.");return;}
+    debts.push({nombre:g("f-nombre"),email:g("f-email"),alias:g("f-alias"),tel:g("f-tel").replace(/\D/g,""),monto:monto,motivo:g("f-motivo")||"Sin motivo"});
+    render();
+    ["f-nombre","f-email","f-alias","f-tel","f-monto","f-motivo"].forEach(function(id){document.getElementById(id).value="";});
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>
