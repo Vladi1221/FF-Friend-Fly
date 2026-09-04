@@ -18,19 +18,20 @@ Instalable desde el navegador en cualquier dispositivo, sin pasar por ninguna st
 ## Estructura del repo
 
 ```
-/app o /web     → frontend (confirmar nombre exacto al clonar)
+/web            → frontend (Vite + React + TS)
   /src
     /components → sistema de diseño base (Botón, Tarjeta, Avatar, Input) + reutilizables
     /features   → una carpeta por feature (grupos, gastos, deudas, perfil, auth)
     /services   → integración con Firebase (auth.ts, firestore.ts, storage.ts)
-  /functions    → Cloud Functions (simplificación de deudas)
+/functions      → Cloud Functions (simplificación de deudas)
 ```
 
 ## Empezar a trabajar
 
-1. Cloná el repo y confirmá con el equipo el nombre de la carpeta del frontend.
-2. Instalá dependencias y levantá el proyecto (`npm install` / `npm run dev` una vez inicializado con Vite).
-3. Revisá el tablero de Trello para autoasignarte una tarjeta.
+1. Cloná el repo.
+2. `cd web && npm install && npm run dev`.
+3. Copiá `web/.env.example` a `web/.env` con las credenciales de Firebase (Auth/Firestore/Storage) del proyecto.
+4. Revisá el tablero de Trello para autoasignarte una tarjeta.
 
 ## Flujo de trabajo (Git)
 
